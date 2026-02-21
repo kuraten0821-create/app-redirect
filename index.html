@@ -1,1 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+var userAgent = navigator.userAgent;
 
+if (userAgent.indexOf("iPhone") != -1 || userAgent.indexOf("iPad") != -1) {
+  window.location.href = "https://apps.apple.com/jp/app/coleman-japan-コールマン-ジャパン-公式アプリ/id6742218671";
+} else if (userAgent.indexOf("Android") != -1) {
+  window.location.href = "https://play.google.com/store/apps/details?id=jp.coleman.members";
+} else {
+  window.location.href = "https://あなたの公式サイト";
+}
+</script>
+</head>
+<body>
+</body>
+</html>
