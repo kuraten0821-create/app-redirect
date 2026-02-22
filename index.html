@@ -2,7 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<script defer src="/_vercel/insights/script.js"></script>
+
+<!-- GA4タグ -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3GTF65RTPP"></script>
+<script>
+window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-3GTF65RTPP');
+</script>
+
 <script>
 var userAgent = navigator.userAgent;
 var os = "other";
@@ -10,29 +18,28 @@ var redirectUrl = "";
 
 if (/iPhone|iPad|iPod/.test(userAgent)) {
   os = "iOS";
-  redirectUrl = "https://nam12.safelinks.protection.outlook.com/?url=https%3A%2F%2Fapps.apple.com%2Fjp%2Fapp%2Fcoleman-japan-%25E3%2582%25B3%25E3%2583%25BC%25E3%2583%25AB%25E3%2583%259E%25E3%2583%25B3-%25E3%2582%25B8%25E3%2583%25A3%25E3%2583%2591%25E3%2583%25B3-%25E5%2585%25AC%25E5%25BC%258F%25E3%2582%25A2%25E3%2583%2597%25E3%2583%25AA%2Fid6742218671&data=05%7C02%7Cyoshiki.toge%40newellco.com%7C11ce1bf07564429ecb3408de71cdfc08%7C666310ae0b9d4182a5f88c8d8d802154%7C0%7C0%7C639073326832643704%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C60000%7C%7C%7C&sdata=XElshnmQnJN00AHNneYAjiWG%2FtUAGn5UlSjvrL4oTP0%3D&reserved=0";
+  redirectUrl = "https://apps.apple.com/jp/app/coleman-japan-コールマン-ジャパン-公式アプリ/id6742218671";
 } else if (/Android/.test(userAgent)) {
   os = "Android";
-  redirectUrl = "https://nam12.safelinks.protection.outlook.com/?url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Djp.coleman.members&data=05%7C02%7Cyoshiki.toge%40newellco.com%7C11ce1bf07564429ecb3408de71cdfc08%7C666310ae0b9d4182a5f88c8d8d802154%7C0%7C0%7C639073326832667572%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C60000%7C%7C%7C&sdata=LyUwmjiJkmAnIVCFFGQ82cb2AqQkpnz32Cuno0r9xjQ%3D&reserved=0";
+  redirectUrl = "https://play.google.com./store/apps/details?id=jp.coleman.members";
 } else {
-  redirectUrl = "https://nam12.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.coleman.co.jp%2F&data=05%7C02%7Cyoshiki.toge%40newellco.com%7C11ce1bf07564429ecb3408de71cdfc08%7C666310ae0b9d4182a5f88c8d8d802154%7C0%7C0%7C639073326832680974%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C60000%7C%7C%7C&sdata=%2Fg%2F%2FYdIqauH3uTMz9oZIEklVUNL90a1zhoX30lTO%2FAc%3D&reserved=0";
+  redirectUrl = "https://www.coleman.co.jp/";
 }
 
-// Vercel Analytics イベント送信
-if (typeof window.va === "function") {
-  window.va("event", {
-    name: "nfc_tap",
-    data: { os: os }
-  });
-}
+// NFCタップイベント送信
+gtag('event', 'nfc_tap', {
+  device_os: os
+});
 
-// 計測確実化のため少し待ってからリダイレクト
+// 計測を確実にするため少し待ってから遷移
 setTimeout(function() {
   window.location.href = redirectUrl;
-}, 400);
+}, 500);
 </script>
+
 </head>
 <body>
 </body>
 </html>
+
 
