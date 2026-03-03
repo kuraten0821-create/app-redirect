@@ -1,45 +1,66 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 
-<!-- GA4タグ -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3GTF65RTPP"></script>
-<script>
-window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-3GTF65RTPP');
-</script>
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-3GTF65RTPP"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-3GTF65RTPP');
+  </script>
 
-<script>
-var userAgent = navigator.userAgent;
-var os = "other";
-var redirectUrl = "";
+  <script>
+    (function () {
+      var ua = navigator.userAgent;
+      var os = 'other';
+      var redirectUrl = '';
+      var store = '';
 
-if (/iPhone|iPad|iPod/.test(userAgent)) {
-  os = "iOS";
-  redirectUrl = "https://apps.apple.com/jp/app/coleman-japan-コールマン-ジャパン-公式アプリ/id6742218671";
-} else if (/Android/.test(userAgent)) {
-  os = "Android";
-  redirectUrl = "https://play.google.com/store/apps/details?id=jp.coleman.members";
-} else {
-  redirectUrl = "https://www.coleman.co.jp/";
-}
+      // OS判定
+      if (/iPhone|iPad|iPod/.test(ua)) {
+        os = 'iOS';
+        store = 'app_store';
+        redirectUrl = "https://apps.apple.com/jp/app/coleman-japan-コールマン-ジャパン-公式アプリ/id6742218671";
+      } else if (/Android/.test(ua)) {
+        os = 'Android';
+        store = 'google_play';
+        redirectUrl = "https://play.google.com/store/apps/details?id=jp.coleman.members";
+      } else {
+        store = 'web';
+        redirectUrl = "https://www.coleman.co.jp/";
+      }
 
-// NFCタップイベント送信
-gtag('event', 'nfc_tap', {
-  device_os: os
-});
+      // 1度だけ遷移させる
+      var redirected = false;
+      function go(){
+        if (!redirected){
+          redirected = true;
+          window.location.href = redirectUrl;
+        }
+      }
 
-// 計測を確実にするため少し待ってから遷移
-setTimeout(function() {
-  window.location.href = redirectUrl;
-}, 500);
-</script>
+      // NFCタップイベント送信（確実に送る設定）
+      gtag('event', 'nfc_tap', {
+        device_os: os,
+        store: store,
+        location: 'Gotemba',     // ← 店舗名を付与（あなたが希望）
+        transport_type: 'beacon', // ← 離脱に強い送信方式
+        event_callback: go,       // ← 送信完了後に遷移
+        event_timeout: 1500       // ← 最大1.5秒待つ（回線悪くても送信保証）
+      });
+
+      // 念のための保険（callbackが来なかった時）
+      setTimeout(go, 2000);
+    })();
+  </script>
 
 </head>
-<body>
-</body>
+<body></body>
 </html>
+``
 
 
