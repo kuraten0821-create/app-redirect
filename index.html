@@ -1,13 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>アプリストアへ移動中…</title>
 
-  <!-- GA4 -->
+  <!-- GA4（測定IDはそのまま公開でOK） -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3GTF65RTPP"></script>
   <script>
-    // GA4 初期化
+    // 中継ページ：自動PVは抑止（イベントで管理）
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
@@ -15,19 +17,21 @@
   </script>
 
   <style>
-    /* 遷移中表示 */
+    :root { color-scheme: light dark; }
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; }
     .wrap {
       min-height: 100dvh; display:flex; align-items:center; justify-content:center; text-align:center;
-      padding: 24px; color:#111; background:#fafafa;
+      padding: 24px; background: #fafafa;
     }
+    @media (prefers-color-scheme: dark) { .wrap { background:#111; } }
     .panel {
-      max-width: 520px; width:100%; background:#fff; border-radius:16px; padding:24px;
+      max-width: 560px; width: 100%; background:#fff; border-radius: 16px; padding: 24px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
     }
-    .title { font-size:18px; font-weight:700; margin:0 0 8px; }
-    .desc { font-size:14px; color:#555; margin:0 0 8px; }
-    .small { font-size:12px; color:#888; }
+    @media (prefers-color-scheme: dark) { .panel { background:#181818; color:#f5f5f5; } }
+    .title { font-size: 18px; font-weight: 700; margin: 0 0 8px; }
+    .desc { font-size: 14px; opacity: .85; margin: 0 0 8px; }
+    .small { font-size: 12px; opacity: .7; }
   </style>
 </head>
 <body>
@@ -35,28 +39,34 @@
     <div class="panel">
       <p class="title">アプリストアへ移動しています…</p>
       <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
-      <p class="small">通信状況により最大2秒ほどかかることがあります。</p>
+      <p class="small">通信状況により最大約2秒かかる場合があります。</p>
     </div>
   </div>
 
   <script>
     (function () {
-      // ---- 設定 -------------------------
+      // ======== URLパラメータから取得 ==========
+      // 許可リスト：Kurashiki / Shisui / Gotemba
+      var params = new URLSearchParams(location.search);
+      var raw = (params.get('store') || '').trim();
+      var normalized = raw.toLowerCase();
+      var ALLOWED = { kurashiki: 'Kurashiki', shisui: 'Shisui' , gotemba: 'Gotemba'};
+      var FIXED_LOCATION = ALLOWED[normalized] || (raw || 'unknown');
+      // ============================================================
+
+      // ---- 設定-------------------------
       var APP_STORE_URL = "https://apps.apple.com/jp/app/coleman-japan-%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%9E%E3%83%B3-%E3%82%B8%E3%83%A3%E3%83%91%E3%83%B3-%E5%85%AC%E5%BC%8F%E3%82%A2%E3%83%97%E3%83%AA/id6742218671";
       var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members";
-
-      // AndroidのDL計測強化用にUTMを付与
+      // AndroidのDL計測強化
       var PLAY_UTM = "utm_source=nfc&utm_medium=card&utm_campaign=app_invite";
-      // Webフォールバックにもお好みでUTM付与
+      // Webフォールバック
       var WEB_URL = "https://www.coleman.co.jp/?utm_source=nfc&utm_medium=card&utm_campaign=app_invite";
 
-      var STORE_LABELS = { ios: "app_store", android: "google_play", other: "web" };
-      var FIXED_LOCATION = "Gotemba"; 
-      var EVENT_TIMEOUT_MS = 1500;    // gtagのイベント送信を待つ最大時間
-      var HARD_REDIRECT_MS = 2000;    // 念のための保険（2秒）
+      var LABELS = { ios: "app_store", android: "google_play", other: "web" };
+      var EVENT_TIMEOUT_MS = 1500;   
+      var HARD_REDIRECT_MS = 2000;    
       // -------------------------------------------------------------
 
-      // UAによる簡易OS判定
       function detectOS() {
         var ua = navigator.userAgent || "";
         if (/iPhone|iPad|iPod/.test(ua)) return "iOS";
@@ -64,62 +74,62 @@
         return "other";
       }
 
-      // 遷移先URLを決定
       function resolveRedirect(os) {
-        if (os === "iOS") return { url: APP_STORE_URL, store: STORE_LABELS.ios };
+        if (os === "iOS") {
+          return { url: APP_STORE_URL, store: LABELS.ios };
+        }
         if (os === "Android") {
           var sep = PLAY_STORE_URL.indexOf("?") === -1 ? "?" : "&";
-          return { url: PLAY_STORE_URL + sep + PLAY_UTM, store: STORE_LABELS.android };
+          return { url: PLAY_STORE_URL + sep + PLAY_UTM, store: LABELS.android };
         }
-        return { url: WEB_URL, store: STORE_LABELS.other };
+        return { url: WEB_URL, store: LABELS.other };
       }
 
       var redirected = false;
-      function redirectNow(targetUrl, reason) {
+      function redirectNow(targetUrl, reason, ctx) {
         if (redirected) return;
         redirected = true;
 
-        //サブイベント（遷移ログ）
+        // サブイベント
         try {
           if (typeof gtag === 'function') {
             gtag('event', 'redirect', {
-              device_os: current.os,
-              store: current.store,
+              device_os: ctx.os,
+              store: ctx.store,
               location: FIXED_LOCATION,
-              redirect_reason: reason,        // 'callback' or 'timeout'
+              redirect_reason: reason, // 'callback'|'timeout'|'no_gtag'
               transport_type: 'beacon'
             });
           }
-        } catch (e) { /* no-op */ }
+        } catch (e) {}
 
         // 履歴を汚さずに遷移
         window.location.replace(targetUrl);
       }
 
-      var current = { os: detectOS() };
-      var dest = resolveRedirect(current.os);
-      current.store = dest.store;
+      var context = { os: detectOS() };
+      var dest = resolveRedirect(context.os);
+      context.store = dest.store;
 
       function fireAndGo() {
-        // gtagが使える場合はイベント送信→callbackで遷移
         if (typeof gtag === 'function') {
+          // メインイベント
           gtag('event', 'nfc_tap', {
-            device_os: current.os,
-            store: current.store,
-            location: FIXED_LOCATION,
+            device_os: context.os,
+            store: context.store,
+            location: FIXED_LOCATION, 
             transport_type: 'beacon',
-            event_callback: function () { redirectNow(dest.url, 'callback'); },
+            event_callback: function(){ redirectNow(dest.url, 'callback', context); },
             event_timeout: EVENT_TIMEOUT_MS
           });
-          // 念のための保険（callbackが来ない環境向け）
-          setTimeout(function () { redirectNow(dest.url, 'timeout'); }, HARD_REDIRECT_MS);
+          // 保険（callbackが来ない環境向け）
+          setTimeout(function(){ redirectNow(dest.url, 'timeout', context); }, HARD_REDIRECT_MS);
         } else {
-          // gtag未ロードなどの想定外時は即時遷移（体験優先）
-          redirectNow(dest.url, 'no_gtag');
+          // gtag未ロードなど想定外時は即時遷移（体験優先）
+          redirectNow(dest.url, 'no_gtag', context);
         }
       }
 
-      // 早すぎる実行を避けるためDOM準備後に開始
       if (document.readyState === 'complete' || document.readyState === 'interactive') {
         fireAndGo();
       } else {
@@ -129,3 +139,4 @@
   </script>
 </body>
 </html>
+
