@@ -1,66 +1,131 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3GTF65RTPP"></script>
   <script>
+    // GA4 初期化
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
-    gtag('config', 'G-3GTF65RTPP');
+    gtag('config', 'G-3GTF65RTPP', { send_page_view: false });
   </script>
+
+  <style>
+    /* 遷移中表示 */
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; }
+    .wrap {
+      min-height: 100dvh; display:flex; align-items:center; justify-content:center; text-align:center;
+      padding: 24px; color:#111; background:#fafafa;
+    }
+    .panel {
+      max-width: 520px; width:100%; background:#fff; border-radius:16px; padding:24px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    .title { font-size:18px; font-weight:700; margin:0 0 8px; }
+    .desc { font-size:14px; color:#555; margin:0 0 8px; }
+    .small { font-size:12px; color:#888; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <p class="title">アプリストアへ移動しています…</p>
+      <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
+      <p class="small">通信状況により最大2秒ほどかかることがあります。</p>
+    </div>
+  </div>
 
   <script>
     (function () {
-      var ua = navigator.userAgent;
-      var os = 'other';
-      var redirectUrl = '';
-      var store = '';
+      // ---- 設定 -------------------------
+      var APP_STORE_URL = "https://apps.apple.com/jp/app/coleman-japan-%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%9E%E3%83%B3-%E3%82%B8%E3%83%A3%E3%83%91%E3%83%B3-%E5%85%AC%E5%BC%8F%E3%82%A2%E3%83%97%E3%83%AA/id6742218671";
+      var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members";
 
-      // OS判定
-      if (/iPhone|iPad|iPod/.test(ua)) {
-        os = 'iOS';
-        store = 'app_store';
-        redirectUrl = "https://apps.apple.com/jp/app/coleman-japan-コールマン-ジャパン-公式アプリ/id6742218671";
-      } else if (/Android/.test(ua)) {
-        os = 'Android';
-        store = 'google_play';
-        redirectUrl = "https://play.google.com/store/apps/details?id=jp.coleman.members";
-      } else {
-        store = 'web';
-        redirectUrl = "https://www.coleman.co.jp/";
+      // AndroidのDL計測強化用にUTMを付与
+      var PLAY_UTM = "utm_source=nfc&utm_medium=card&utm_campaign=app_invite";
+      // Webフォールバックにもお好みでUTM付与
+      var WEB_URL = "https://www.coleman.co.jp/?utm_source=nfc&utm_medium=card&utm_campaign=app_invite";
+
+      var STORE_LABELS = { ios: "app_store", android: "google_play", other: "web" };
+      var FIXED_LOCATION = "Gotemba"; 
+      var EVENT_TIMEOUT_MS = 1500;    // gtagのイベント送信を待つ最大時間
+      var HARD_REDIRECT_MS = 2000;    // 念のための保険（2秒）
+      // -------------------------------------------------------------
+
+      // UAによる簡易OS判定
+      function detectOS() {
+        var ua = navigator.userAgent || "";
+        if (/iPhone|iPad|iPod/.test(ua)) return "iOS";
+        if (/Android/.test(ua)) return "Android";
+        return "other";
       }
 
-      // 1度だけ遷移させる
+      // 遷移先URLを決定
+      function resolveRedirect(os) {
+        if (os === "iOS") return { url: APP_STORE_URL, store: STORE_LABELS.ios };
+        if (os === "Android") {
+          var sep = PLAY_STORE_URL.indexOf("?") === -1 ? "?" : "&";
+          return { url: PLAY_STORE_URL + sep + PLAY_UTM, store: STORE_LABELS.android };
+        }
+        return { url: WEB_URL, store: STORE_LABELS.other };
+      }
+
       var redirected = false;
-      function go(){
-        if (!redirected){
-          redirected = true;
-          window.location.href = redirectUrl;
+      function redirectNow(targetUrl, reason) {
+        if (redirected) return;
+        redirected = true;
+
+        //サブイベント（遷移ログ）
+        try {
+          if (typeof gtag === 'function') {
+            gtag('event', 'redirect', {
+              device_os: current.os,
+              store: current.store,
+              location: FIXED_LOCATION,
+              redirect_reason: reason,        // 'callback' or 'timeout'
+              transport_type: 'beacon'
+            });
+          }
+        } catch (e) { /* no-op */ }
+
+        // 履歴を汚さずに遷移
+        window.location.replace(targetUrl);
+      }
+
+      var current = { os: detectOS() };
+      var dest = resolveRedirect(current.os);
+      current.store = dest.store;
+
+      function fireAndGo() {
+        // gtagが使える場合はイベント送信→callbackで遷移
+        if (typeof gtag === 'function') {
+          gtag('event', 'nfc_tap', {
+            device_os: current.os,
+            store: current.store,
+            location: FIXED_LOCATION,
+            transport_type: 'beacon',
+            event_callback: function () { redirectNow(dest.url, 'callback'); },
+            event_timeout: EVENT_TIMEOUT_MS
+          });
+          // 念のための保険（callbackが来ない環境向け）
+          setTimeout(function () { redirectNow(dest.url, 'timeout'); }, HARD_REDIRECT_MS);
+        } else {
+          // gtag未ロードなどの想定外時は即時遷移（体験優先）
+          redirectNow(dest.url, 'no_gtag');
         }
       }
 
-      // NFCタップイベント送信（確実に送る設定）
-      gtag('event', 'nfc_tap', {
-        device_os: os,
-        store: store,
-        location: 'Gotemba',     // ← 店舗名を付与（あなたが希望）
-        transport_type: 'beacon', // ← 離脱に強い送信方式
-        event_callback: go,       // ← 送信完了後に遷移
-        event_timeout: 1500       // ← 最大1.5秒待つ（回線悪くても送信保証）
-      });
-
-      // 念のための保険（callbackが来なかった時）
-      setTimeout(go, 2000);
+      // 早すぎる実行を避けるためDOM準備後に開始
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        fireAndGo();
+      } else {
+        document.addEventListener('DOMContentLoaded', fireAndGo);
+      }
     })();
   </script>
-
-</head>
-<body></body>
+</body>
 </html>
-``
-
-
