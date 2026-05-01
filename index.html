@@ -45,6 +45,15 @@
     .title { font-size:18px; font-weight:700; margin:0 0 8px; }
     .desc  { font-size:14px; opacity:.85; margin:0 0 8px; }
     .small { font-size:12px; opacity:.7; }
+    .debug {
+      margin-top:16px;
+      font-size:12px;
+      text-align:left;
+      word-break:break-all;
+      background:#f0f0f0;
+      padding:12px;
+      border-radius:8px;
+    }
   </style>
 </head>
 
@@ -54,6 +63,9 @@
     <p class="title">アプリストアへ移動しています…</p>
     <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
     <p class="small">通信状況により最大1〜2秒かかる場合があります。</p>
+
+    <!-- デバッグ表示 -->
+    <div id="debugArea" class="debug" style="display:none;"></div>
   </div>
 </div>
 
@@ -85,7 +97,7 @@
 
   var context = { os: detectOS() };
 
-  /* ===== 疑似デバイスID生成 ===== */
+  /* ===== device_id ===== */
   function getDeviceId(){
     var id = localStorage.getItem('device_id');
     if (!id) {
@@ -101,23 +113,36 @@
   var repeated = !!sessionStorage.getItem('nfc_seen');
   sessionStorage.setItem('nfc_seen', '1');
 
-  /* ===== nfc_tap（確定送信） ===== */
+  /* ===== イベント送信 ===== */
   window.addEventListener('DOMContentLoaded', function () {
     var elapsedMs = Date.now() - pageOpenedAt;
 
+    var payload = {
+      device_os: context.os,
+      location: LOCATION,
+      elapsed_ms: Number(elapsedMs),
+      repeated: Number(repeated ? 1 : 0),
+      device_id: String(deviceId),
+      is_debug: DEBUG ? 1 : 0
+    };
+
+    // console出力
+    console.log("GA送信", payload);
+
+    // 画面表示（デバッグ時）
+    if (DEBUG) {
+      var el = document.getElementById('debugArea');
+      el.style.display = 'block';
+      el.innerText = JSON.stringify(payload, null, 2);
+    }
+
+    // GA送信
     if (typeof gtag === 'function') {
-      gtag('event', 'nfc_tap', {
-        device_os: context.os,
-        location: LOCATION,
-        elapsed_ms: elapsedMs,
-        repeated: repeated ? 1 : 0,
-        device_id: deviceId,   // ← 追加
-        is_debug: DEBUG ? 1 : 0
-      });
+      gtag('event', 'nfc_tap', payload);
     }
   });
 
-  /* ===== 遷移先URL ===== */
+  /* ===== 遷移先 ===== */
   var APP_STORE_URL  = "https://apps.apple.com/jp/app/coleman-japan/id6742218671";
   var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members&utm_source=nfc&utm_medium=card";
   var WEB_URL        = "https://www.coleman.co.jp/";
@@ -126,10 +151,12 @@
   if (context.os === "iOS") destUrl = APP_STORE_URL;
   if (context.os === "Android") destUrl = PLAY_STORE_URL;
 
-  /* ===== リダイレクト ===== */
-  setTimeout(function(){
-    window.location.replace(destUrl);
-  }, DEBUG ? 2500 : 1200);
+  /* ===== リダイレクト（デバッグ時は停止） ===== */
+  if (!DEBUG) {
+    setTimeout(function(){
+      window.location.replace(destUrl);
+    }, 1200);
+  }
 
 })();
 </script>
