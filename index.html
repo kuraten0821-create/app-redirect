@@ -30,9 +30,7 @@
       padding:24px;
       background:#fafafa;
     }
-    @media (prefers-color-scheme: dark){
-      .wrap{ background:#111; }
-    }
+    @media (prefers-color-scheme: dark){ .wrap{ background:#111; } }
     .panel {
       max-width:560px;
       width:100%;
@@ -51,130 +49,75 @@
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="panel">
-      <p class="title">アプリストアへ移動しています…</p>
-      <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
-      <p class="small">通信状況により最大2〜3秒かかる場合があります。</p>
-    </div>
+<div class="wrap">
+  <div class="panel">
+    <p class="title">アプリストアへ移動しています…</p>
+    <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
+    <p class="small">通信状況により最大2～3秒かかる場合があります。</p>
   </div>
+</div>
 
-  <script>
-    (function () {
+<script>
+(function () {
 
-      /* 店舗名の取得 */
-      var params      = new URLSearchParams(location.search);
-      var rawStore    = (params.get('store') || '').trim();
-      var normalized  = rawStore.toLowerCase();
-      var DEBUG       = params.get('debug') === '1';
+  /* ===== 基本情報 ===== */
+  var pageOpenedAt = Date.now();
 
-      /* 店舗の一覧（小文字 → 表示名） */
-      var STORES = {
-        nagareyama: 'Nagareyama',
-        rinku:      'Rinku',
-        sano:       'Sano',
-        gotemba:    'Gotemba',
-        toki:       'Toki',
-        karuizawa:  'Karuizawa',
-        tosu:       'Tosu',
-        shisui:     'Shisui',
-        akishima:   'Akishima',
-        nagashima:  'Nagashima'
-      };
+  var params   = new URLSearchParams(location.search);
+  var rawStore = (params.get('store') || '').trim();
+  var storeKey = rawStore.toLowerCase();
+  var DEBUG    = params.get('debug') === '1';
 
-      var LOCATION = STORES[normalized] || (rawStore || 'unknown');
+  var STORES = {
+    nagareyama:'Nagareyama', rinku:'Rinku', sano:'Sano', gotemba:'Gotemba',
+    toki:'Toki', karuizawa:'Karuizawa', tosu:'Tosu',
+    shisui:'Shisui', akishima:'Akishima', nagashima:'Nagashima'
+  };
+  var LOCATION = STORES[storeKey] || (rawStore || 'unknown');
 
-      /* 各種URL */
-      var APP_STORE_URL  = "https://apps.apple.com/jp/app/coleman-japan-%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%9E%E3%83%B3-%E3%82%B8%E3%83%A3%E3%83%91%E3%83%B3-%E5%85%AC%E5%BC%8F%E3%82%A2%E3%83%97%E3%83%AA/id6742218671";
-      var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members";
-      var PLAY_UTM       = "utm_source=nfc&utm_medium=card&utm_campaign=app_invite";
-      var WEB_URL        = "https://www.coleman.co.jp/?utm_source=nfc&utm_medium=card&utm_campaign=app_invite";
+  /* ===== OS判定 ===== */
+  function detectOS(){
+    var ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod/.test(ua)) return "iOS";
+    if (/Android/.test(ua)) return "Android";
+    return "other";
+  }
 
-      /* ラベル */
-      var LABELS = {
-        ios:     "app_store",
-        android: "google_play",
-        other:   "web"
-      };
+  var context = { os: detectOS() };
 
-      /* タイミング設定 */
-      var EVENT_TIMEOUT_MS = 1500;
-      var HARD_REDIRECT_MS = DEBUG ? 2500 : 2000;
+  /* ===== 再訪フラグ（兆候検知用） ===== */
+  var repeated = !!sessionStorage.getItem('nfc_seen');
+  sessionStorage.setItem('nfc_seen', '1');
 
-      /* OS 判定 */
-      function detectOS() {
-        var ua = navigator.userAgent || "";
-        if (/iPhone|iPad|iPod/.test(ua)) return "iOS";
-        if (/Android/.test(ua)) return "Android";
-        return "other";
-      }
+  /* ===== nfc_tap（確定送信） ===== */
+  window.addEventListener('DOMContentLoaded', function () {
+    var elapsedMs = Date.now() - pageOpenedAt;
 
-      /* 遷移先の決定 */
-      function resolveRedirect(os) {
-        if (os === "iOS") return { url: APP_STORE_URL, store: LABELS.ios };
-        if (os === "Android") {
-          var sep = PLAY_STORE_URL.includes("?") ? "&" : "?";
-          return { url: PLAY_STORE_URL + sep + PLAY_UTM, store: LABELS.android };
-        }
-        return { url: WEB_URL, store: LABELS.other };
-      }
+    if (typeof gtag === 'function') {
+      gtag('event', 'nfc_tap', {
+        device_os: context.os,
+        location: LOCATION,
+        elapsed_ms: elapsedMs,   // 滞在時間
+        repeated: repeated ? 1 : 0, // 再訪フラグ
+        is_debug: DEBUG ? 1 : 0
+      });
+    }
+  });
 
-      /* 遷移処理 */
-      var redirected = false;
-      function redirectNow(targetUrl, reason, ctx) {
-        if (redirected) return;
-        redirected = true;
+  /* ===== リダイレクト（イベントと完全分離） ===== */
+  var APP_STORE_URL  = "https://apps.apple.com/jp/app/coleman-japan/id6742218671";
+  var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members";
+  var WEB_URL        = "https://www.coleman.co.jp/";
 
-        /* 遷移ログ */
-        if (typeof gtag === 'function') {
-          gtag('event', 'redirect', {
-            device_os:     ctx.os,
-            store:         ctx.store,
-            location:      LOCATION,
-            redirect_reason: reason,
-            transport_type: 'beacon',
-            debug_mode:    DEBUG || undefined
-          });
-        }
+  var destUrl = WEB_URL;
+  if (context.os === "iOS") destUrl = APP_STORE_URL;
+  if (context.os === "Android") destUrl = PLAY_STORE_URL + "?utm_source=nfc&utm_medium=card";
 
-        window.location.replace(targetUrl);
-      }
+  setTimeout(function(){
+    window.location.replace(destUrl);
+  }, DEBUG ? 2500 : 2000);
 
-      /* 実行 */
-      var context = { os: detectOS() };
-      var dest    = resolveRedirect(context.os);
-      context.store = dest.store;
-
-      function fireAndGo() {
-        if (typeof gtag === 'function') {
-          /* メインイベント */
-          gtag('event', 'nfc_tap', {
-            device_os:     context.os,
-            store:         context.store,
-            location:      LOCATION,
-            transport_type:'beacon',
-            debug_mode:    DEBUG || undefined,
-            event_callback: function(){ redirectNow(dest.url, 'callback', context); },
-            event_timeout: EVENT_TIMEOUT_MS
-          });
-
-          /* 保険 */
-          setTimeout(function(){
-            redirectNow(dest.url, 'timeout', context);
-          }, HARD_REDIRECT_MS);
-
-        } else {
-          redirectNow(dest.url, 'no_gtag', context);
-        }
-      }
-
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        fireAndGo();
-      } else {
-        document.addEventListener('DOMContentLoaded', fireAndGo);
-      }
-
-    })();
-  </script>
+})();
+</script>
 </body>
 </html>
