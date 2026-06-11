@@ -54,23 +54,19 @@
       padding:12px;
       border-radius:8px;
     }
+  .version {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      font-size: 11px;
+      opacity: .5;
+      z-index: 999;
+  }    
   </style>
 </head>
 
 <body>
-<div style="
-position:fixed;
-top:0;
-left:0;
-right:0;
-padding:12px;
-background:#ff0000;
-color:#ffffff;
-font-weight:bold;
-text-align:center;
-z-index:99999;">
-TEST BRANCH 2026/06/11.1
-</div>
+<div class="version">Version 1.02</div>
 
 <div class="wrap">
   <div class="panel">
@@ -96,7 +92,7 @@ TEST BRANCH 2026/06/11.1
   var DEBUG    = params.get('debug') === '1';
 
   var STORES = {
-    test:'Test Store',nagareyama:'Nagareyama', rinku:'Rinku', sano:'Sano', gotemba:'Gotemba',
+    nagareyama:'Nagareyama', rinku:'Rinku', sano:'Sano', gotemba:'Gotemba',
     toki:'Toki', karuizawa:'Karuizawa', tosu:'Tosu',
     shisui:'Shisui', akishima:'Akishima', nagashima:'Nagashima'
   };
@@ -132,7 +128,7 @@ TEST BRANCH 2026/06/11.1
   window.addEventListener('DOMContentLoaded', function () {
     var elapsedMs = Date.now() - pageOpenedAt;
 
-    var payload = {
+   var payload = {
   device_os: context.os,
   location: LOCATION,
   staff_code: staffCode,
@@ -149,7 +145,9 @@ TEST BRANCH 2026/06/11.1
     if (DEBUG) {
       var el = document.getElementById('debugArea');
       el.style.display = 'block';
-      el.innerText = JSON.stringify(payload, null, 2);
+      el.innerHTML =
+  '<strong>Version 1.02</strong><br><br>' +
+  '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
     }
 
     // GA送信
@@ -168,18 +166,12 @@ TEST BRANCH 2026/06/11.1
   if (context.os === "Android") destUrl = PLAY_STORE_URL;
 
   /* ===== リダイレクト（デバッグ時は停止） ===== */
-if (DEBUG) {
-  var el = document.getElementById('debugArea');
-  el.style.display = 'block';
+  if (!DEBUG) {
+    setTimeout(function(){
+      window.location.replace(destUrl);
+    }, 1200);
+  }
 
-  el.innerHTML =
-    '<h3>テスト確認</h3>' +
-    '<p><b>店舗:</b> ' + LOCATION + '</p>' +
-    '<p><b>スタッフ:</b> ' + staffCode + '</p>' +
-    '<p><b>OS:</b> ' + context.os + '</p>' +
-    '<hr>' +
-    '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
-}
 })();
 </script>
 </body>
