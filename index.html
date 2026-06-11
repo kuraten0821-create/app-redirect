@@ -58,8 +58,18 @@
 </head>
 
 <body>
-<div style="position:fixed;top:0;left:0;background:red;color:#fff;z-index:9999;">
-NEW VERSION 123
+<div style="
+position:fixed;
+top:0;
+left:0;
+right:0;
+padding:12px;
+background:#ff0000;
+color:#ffffff;
+font-weight:bold;
+text-align:center;
+z-index:99999;">
+TEST BRANCH
 </div>
 
 <div class="wrap">
@@ -156,11 +166,9 @@ NEW VERSION 123
   if (context.os === "Android") destUrl = PLAY_STORE_URL;
 
   /* ===== リダイレクト（デバッグ時は停止） ===== */
-  if (!DEBUG) {
-    setTimeout(function(){
-      window.location.replace(destUrl);
-    }, 1200);
-  }
+ if (!DEBUG) {
+  console.log("TEST BRANCH - redirect disabled");
+}
 
 })();
 </script>
