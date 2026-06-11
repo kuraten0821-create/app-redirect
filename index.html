@@ -91,11 +91,12 @@ TEST BRANCH 2026/06/11.1
 
   var params   = new URLSearchParams(location.search);
   var rawStore = (params.get('store') || '').trim();
+  var staffCode = (params.get('staff') || '').trim();
   var storeKey = rawStore.toLowerCase();
   var DEBUG    = params.get('debug') === '1';
 
   var STORES = {
-    nagareyama:'Nagareyama', rinku:'Rinku', sano:'Sano', gotemba:'Gotemba',
+    test:'Test Store',nagareyama:'Nagareyama', rinku:'Rinku', sano:'Sano', gotemba:'Gotemba',
     toki:'Toki', karuizawa:'Karuizawa', tosu:'Tosu',
     shisui:'Shisui', akishima:'Akishima', nagashima:'Nagashima'
   };
@@ -132,13 +133,14 @@ TEST BRANCH 2026/06/11.1
     var elapsedMs = Date.now() - pageOpenedAt;
 
     var payload = {
-      device_os: context.os,
-      location: LOCATION,
-      elapsed_ms: Number(elapsedMs),
-      repeated: Number(repeated ? 1 : 0),
-      device_id: String(deviceId),
-      is_debug: DEBUG ? 1 : 0
-    };
+  device_os: context.os,
+  location: LOCATION,
+  staff_code: staffCode,
+  elapsed_ms: Number(elapsedMs),
+  repeated: Number(repeated ? 1 : 0),
+  device_id: String(deviceId),
+  is_debug: DEBUG ? 1 : 0
+};
 
     // console出力
     console.log("GA送信", payload);
@@ -166,10 +168,18 @@ TEST BRANCH 2026/06/11.1
   if (context.os === "Android") destUrl = PLAY_STORE_URL;
 
   /* ===== リダイレクト（デバッグ時は停止） ===== */
- if (!DEBUG) {
-  console.log("TEST BRANCH - redirect disabled");
-}
+if (DEBUG) {
+  var el = document.getElementById('debugArea');
+  el.style.display = 'block';
 
+  el.innerHTML =
+    '<h3>テスト確認</h3>' +
+    '<p><b>店舗:</b> ' + LOCATION + '</p>' +
+    '<p><b>スタッフ:</b> ' + staffCode + '</p>' +
+    '<p><b>OS:</b> ' + context.os + '</p>' +
+    '<hr>' +
+    '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
+}
 })();
 </script>
 </body>
