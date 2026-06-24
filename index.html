@@ -54,13 +54,19 @@
       padding:12px;
       border-radius:8px;
     }
+  .version {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      font-size: 11px;
+      opacity: .5;
+      z-index: 999;
+  }    
   </style>
 </head>
 
 <body>
-<div style="position:fixed;top:0;left:0;background:red;color:#fff;z-index:9999;">
-NEW VERSION 123
-</div>
+<div class="version">v1.1</div>
 
 <div class="wrap">
   <div class="panel">
@@ -81,6 +87,7 @@ NEW VERSION 123
 
   var params   = new URLSearchParams(location.search);
   var rawStore = (params.get('store') || '').trim();
+  var staffCode = (params.get('staff') || '').trim();
   var storeKey = rawStore.toLowerCase();
   var DEBUG    = params.get('debug') === '1';
 
@@ -121,14 +128,15 @@ NEW VERSION 123
   window.addEventListener('DOMContentLoaded', function () {
     var elapsedMs = Date.now() - pageOpenedAt;
 
-    var payload = {
-      device_os: context.os,
-      location: LOCATION,
-      elapsed_ms: Number(elapsedMs),
-      repeated: Number(repeated ? 1 : 0),
-      device_id: String(deviceId),
-      is_debug: DEBUG ? 1 : 0
-    };
+   var payload = {
+  device_os: context.os,
+  location: LOCATION,
+  staff_code: staffCode,
+  elapsed_ms: Number(elapsedMs),
+  repeated: Number(repeated ? 1 : 0),
+  device_id: String(deviceId),
+  is_debug: DEBUG ? 1 : 0
+};
 
     // console出力
     console.log("GA送信", payload);
@@ -137,7 +145,9 @@ NEW VERSION 123
     if (DEBUG) {
       var el = document.getElementById('debugArea');
       el.style.display = 'block';
-      el.innerText = JSON.stringify(payload, null, 2);
+      el.innerHTML =
+  '<strong>Version 1.02</strong><br><br>' +
+  '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
     }
 
     // GA送信
