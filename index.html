@@ -66,7 +66,7 @@
 </head>
 
 <body>
-<div class="version">v1.1</div>
+<div class="version">v1.2.0</div>
 
 <div class="wrap">
   <div class="panel">
@@ -81,6 +81,9 @@
 
 <script>
 (function () {
+const VERSION = "1.2.0";
+const BUILD = "001";
+const DUPLICATE_INTERVAL = 10000; 
 
   /* ===== 基本情報 ===== */
   var pageOpenedAt = Date.now();
@@ -110,6 +113,7 @@
 
   /* ===== device_id ===== */
   function getDeviceId(){
+    var eventId = crypto.randomUUID();
     var id = localStorage.getItem('device_id');
     if (!id) {
       id = Math.random().toString(36).substring(2) + Date.now();
@@ -123,6 +127,18 @@
   /* ===== 再訪フラグ ===== */
   var repeated = !!sessionStorage.getItem('nfc_seen');
   sessionStorage.setItem('nfc_seen', '1');
+  /* ===== 重複送信防止 ===== */
+
+var duplicateKey = "nfc_" + LOCATION + "_" + staffCode;
+
+var duplicateData =
+    JSON.parse(localStorage.getItem(duplicateKey) || "{}");
+
+var now = Date.now();
+
+var shouldSend =
+    !duplicateData.time ||
+    (now - duplicateData.time > DUPLICATE_INTERVAL);
 
   /* ===== イベント送信 ===== */
   window.addEventListener('DOMContentLoaded', function () {
@@ -132,6 +148,10 @@
   device_os: context.os,
   location: LOCATION,
   staff_code: staffCode,
+  event_id: eventId,
+  version: VERSION,
+  build: BUILD,
+  duplicate_window: DUPLICATE_INTERVAL,
   elapsed_ms: Number(elapsedMs),
   repeated: Number(repeated ? 1 : 0),
   device_id: String(deviceId),
@@ -146,14 +166,25 @@
       var el = document.getElementById('debugArea');
       el.style.display = 'block';
       el.innerHTML =
-  '<strong>Version 1.02</strong><br><br>' +
+ '<strong>' + VERSION + '</strong><br><br>'
   '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
     }
 
     // GA送信
+    if (shouldSend) {
     if (typeof gtag === 'function') {
-      gtag('event', 'nfc_tap', payload);
+        gtag('event', 'nfc_tap', payload);
     }
+    localStorage.setItem(
+        duplicateKey,
+        JSON.stringify({
+            time: now
+        })
+    );
+    console.log("nfc_tap送信");
+   } else {
+    console.log("10秒以内の重複送信を防止");
+}
   });
 
   /* ===== 遷移先 ===== */
