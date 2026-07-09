@@ -166,14 +166,14 @@ var shouldSend =
     console.log("GA送信", payload);
 
     // 画面表示（デバッグ時）
-    if (DEBUG) {
-      var el = document.getElementById('debugArea');
-      el.style.display = 'block';
-      el.innerHTML =
- '<strong>' + VERSION + '</strong><br><br>' +
-  '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
-    }
+   if (DEBUG) {
+    var el = document.getElementById('debugArea');
+    el.style.display = 'block';
 
+    el.innerHTML =
+        "<h3>" + (shouldSend ? "✅ GA送信します" : "⛔ 10秒以内なので送信しません") + "</h3>" +
+        "<pre>" + JSON.stringify(payload, null, 2) + "</pre>";
+}
     // GA送信
     if (shouldSend) {
     if (typeof gtag === 'function') {
