@@ -134,14 +134,12 @@ var duplicateKey = "nfc_" + LOCATION + "_" + staffCode;
 var duplicateData =
     JSON.parse(localStorage.getItem(duplicateKey) || "{}");
 
-var now = Date.now();
-
-var shouldSend =
-    !duplicateData.time ||
-    (now - duplicateData.time > DUPLICATE_INTERVAL);
-
   /* ===== イベント送信 ===== */
   window.addEventListener('DOMContentLoaded', function () {
+    var now = Date.now();
+    var shouldSend =
+    !duplicateData.time ||
+    (now - duplicateData.time > DUPLICATE_INTERVAL);
     var elapsedMs = Date.now() - pageOpenedAt;
 
    var payload = {
@@ -152,9 +150,9 @@ var shouldSend =
   version: VERSION,
   build: BUILD,
   should_send: shouldSend,
-　duplicate_key: duplicateKey,
+  duplicate_key: duplicateKey,
   last_sent: duplicateData.time || null,
-　current_time: now,
+  current_time: now,
   duplicate_window: DUPLICATE_INTERVAL,
   elapsed_ms: Number(elapsedMs),
   repeated: Number(repeated ? 1 : 0),
