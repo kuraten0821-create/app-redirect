@@ -43,8 +43,27 @@
       .panel{ background:#181818; color:#f5f5f5; }
     }
     .title { font-size:18px; font-weight:700; margin:0 0 8px; }
-    .desc  { font-size:14px; opacity:.85; margin:0 0 8px; }
+    .desc  { font-size:14px; opacity:.85; margin:0 0 8px; line-height:1.7; }
     .small { font-size:12px; opacity:.7; }
+    .badge {
+      display:inline-block;
+      background:#111; color:#f5c518;
+      font-size:11px; font-weight:700; letter-spacing:.06em;
+      padding:4px 10px; border-radius:4px; margin-bottom:12px;
+    }
+    @media (prefers-color-scheme: dark){ .badge{ background:#f5c518; color:#111; } }
+    .btn {
+      display:block; width:100%;
+      border:0; border-radius:12px;
+      padding:16px 12px; margin-top:12px;
+      font-size:16px; font-weight:700;
+      cursor:pointer;
+      font-family:inherit;
+    }
+    .btn-line { background:#06c755; color:#fff; }
+    .btn-app  { background:#111; color:#fff; }
+    @media (prefers-color-scheme: dark){ .btn-app{ background:#f5f5f5; color:#111; } }
+    .btn[disabled]{ opacity:.55; cursor:default; }
     .debug {
       margin-top:16px;
       font-size:12px;
@@ -54,6 +73,7 @@
       padding:12px;
       border-radius:8px;
     }
+    @media (prefers-color-scheme: dark){ .debug{ background:#222; } }
   .version {
       position: fixed;
       right: 10px;
@@ -61,18 +81,31 @@
       font-size: 11px;
       opacity: .5;
       z-index: 999;
-  }    
+  }
   </style>
 </head>
 
 <body>
-<div class="version">v1.2.0</div>
+<div class="version">v1.3.0-test</div>
 
 <div class="wrap">
   <div class="panel">
-    <p class="title">アプリストアへ移動しています…</p>
-    <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
-    <p class="small">通信状況により最大1〜2秒かかる場合があります。</p>
+    <!-- 通常時（従来通り・自動遷移） -->
+    <div id="normalView">
+      <p class="title">アプリストアへ移動しています…</p>
+      <p class="desc">数秒待っても自動で移動しない場合は、端末の戻るボタンでお戻りください。</p>
+      <p class="small">通信状況により最大1〜2秒かかる場合があります。</p>
+    </div>
+
+    <!-- セール期間中（2ボタン選択） -->
+    <div id="campaignView" style="display:none;">
+      <div class="badge">TEST｜11/12–11/19 事前テスト</div>
+      <p class="title">アプリ・LINEのご案内</p>
+      <p class="desc">セール期間中、LINE友だち追加で<strong>追加割引クーポン</strong>を配布しています。ご希望の案内をお選びください。</p>
+      <button type="button" id="btnLine" class="btn btn-line">LINEで追加割引クーポンを受け取る</button>
+      <button type="button" id="btnApp" class="btn btn-app">アプリストアで会員登録する</button>
+      <p class="small" style="margin-top:12px;">アプリはお使いの端末に合わせてストアが開きます。</p>
+    </div>
 
     <!-- デバッグ表示 -->
     <div id="debugArea" class="debug" style="display:none;"></div>
@@ -81,9 +114,19 @@
 
 <script>
 (function () {
-const VERSION = "1.2.0";
-const BUILD = "001";
-const DUPLICATE_INTERVAL = 10000; 
+const VERSION = "1.3.0-test";
+const BUILD = "t001";
+const DUPLICATE_INTERVAL = 10000;
+
+/* ===== セール設定（期間中は2ボタン表示、期間外は従来の自動遷移） ===== */
+var CAMPAIGN = {
+  start: new Date("2026-11-12T00:00:00+09:00").getTime(),
+  end:   new Date("2026-11-19T23:59:59+09:00").getTime(),
+  /* ★要差し替え：LINE友だち追加URL（公式アカウントの招待URL） */
+  lineUrl: "https://line.me/R/ti/p/%40322yxjmw"
+};
+var nowMs = Date.now();
+var isCampaign = (nowMs >= CAMPAIGN.start && nowMs <= CAMPAIGN.end);
 
   /* ===== 基本情報 ===== */
   var pageOpenedAt = Date.now();
@@ -111,7 +154,7 @@ const DUPLICATE_INTERVAL = 10000;
 
   var context = { os: detectOS() };
   var eventId = crypto.randomUUID();
-  
+
   /* ===== device_id ===== */
   function getDeviceId(){
     var id = localStorage.getItem('device_id');
@@ -127,14 +170,38 @@ const DUPLICATE_INTERVAL = 10000;
   /* ===== 再訪フラグ ===== */
   var repeated = !!sessionStorage.getItem('nfc_seen');
   sessionStorage.setItem('nfc_seen', '1');
+
   /* ===== 重複送信防止 ===== */
-
-var duplicateKey = "nfc_" + LOCATION + "_" + staffCode;
-
-var duplicateData =
+  var duplicateKey = "nfc_" + LOCATION + "_" + staffCode;
+  var duplicateData =
     JSON.parse(localStorage.getItem(duplicateKey) || "{}");
 
-  /* ===== イベント送信 ===== */
+  /* ===== 遷移先 ===== */
+  var APP_STORE_URL  = "https://apps.apple.com/jp/app/coleman-japan/id6742218671";
+  var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members&utm_source=nfc&utm_medium=card";
+  var WEB_URL        = "https://www.coleman.co.jp/";
+
+  var destUrl = WEB_URL;
+  if (context.os === "iOS") destUrl = APP_STORE_URL;
+  if (context.os === "Android") destUrl = PLAY_STORE_URL;
+
+  /* ===== 共通ペイロード ===== */
+  function basePayload(){
+    return {
+      device_os: context.os,
+      location: LOCATION,
+      staff_code: staffCode,
+      event_id: eventId,
+      version: VERSION,
+      build: BUILD,
+      repeated: Number(repeated ? 1 : 0),
+      device_id: String(deviceId),
+      is_debug: DEBUG ? 1 : 0,
+      is_campaign: isCampaign ? 1 : 0
+    };
+  }
+
+  /* ===== イベント送信（着地：nfc_tap） ===== */
   window.addEventListener('DOMContentLoaded', function () {
     var now = Date.now();
     var shouldSend =
@@ -142,23 +209,13 @@ var duplicateData =
     (now - duplicateData.time > DUPLICATE_INTERVAL);
     var elapsedMs = Date.now() - pageOpenedAt;
 
-   var payload = {
-  device_os: context.os,
-  location: LOCATION,
-  staff_code: staffCode,
-  event_id: eventId,
-  version: VERSION,
-  build: BUILD,
-  should_send: shouldSend,
-  duplicate_key: duplicateKey,
-  last_sent: duplicateData.time || null,
-  current_time: now,
-  duplicate_window: DUPLICATE_INTERVAL,
-  elapsed_ms: Number(elapsedMs),
-  repeated: Number(repeated ? 1 : 0),
-  device_id: String(deviceId),
-  is_debug: DEBUG ? 1 : 0
-};
+   var payload = basePayload();
+   payload.should_send = shouldSend;
+   payload.duplicate_key = duplicateKey;
+   payload.last_sent = duplicateData.time || null;
+   payload.current_time = now;
+   payload.duplicate_window = DUPLICATE_INTERVAL;
+   payload.elapsed_ms = Number(elapsedMs);
 
     // console出力
     console.log("GA送信", payload);
@@ -170,6 +227,7 @@ var duplicateData =
 
     el.innerHTML =
         "<h3>" + (shouldSend ? "✅ GA送信します" : "⛔ 10秒以内なので送信しません") + "</h3>" +
+        "<p>is_campaign: " + payload.is_campaign + "（1=2ボタン表示中）</p>" +
         "<pre>" + JSON.stringify(payload, null, 2) + "</pre>";
 }
     // GA送信
@@ -187,19 +245,57 @@ var duplicateData =
    } else {
     console.log("10秒以内の重複送信を防止");
 }
+
+    /* ===== 期間中：2ボタン表示に切り替え ===== */
+    if (isCampaign) {
+      document.getElementById('normalView').style.display = 'none';
+      document.getElementById('campaignView').style.display = 'block';
+      document.title = "アプリ・LINEのご案内";
+    }
   });
 
-  /* ===== 遷移先 ===== */
-  var APP_STORE_URL  = "https://apps.apple.com/jp/app/coleman-japan/id6742218671";
-  var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=jp.coleman.members&utm_source=nfc&utm_medium=card";
-  var WEB_URL        = "https://www.coleman.co.jp/";
+  /* ===== ボタン選択イベント（nfc_choice） ===== */
+  function goChoice(choice, url){
+    var payload = basePayload();
+    payload.choice = choice; // 'line' or 'app_store'
+    console.log("GA送信(choice)", payload);
+    if (DEBUG) {
+      var el = document.getElementById('debugArea');
+      el.style.display = 'block';
+      el.innerHTML += "<h3>choice: " + choice + "</h3><pre>" +
+        JSON.stringify(payload, null, 2) + "</pre><p>デバッグ中のため遷移しません。</p>";
+      return;
+    }
+    var moved = false;
+    function move(){
+      if (moved) return;
+      moved = true;
+      window.location.replace(url);
+    }
+    if (typeof gtag === 'function') {
+      gtag('event', 'nfc_choice', Object.assign({}, payload, {
+        event_callback: move,
+        event_timeout: 800
+      }));
+      setTimeout(move, 900); // フォールバック
+    } else {
+      move();
+    }
+  }
 
-  var destUrl = WEB_URL;
-  if (context.os === "iOS") destUrl = APP_STORE_URL;
-  if (context.os === "Android") destUrl = PLAY_STORE_URL;
+  document.getElementById('btnLine').addEventListener('click', function(){
+    this.disabled = true;
+    document.getElementById('btnApp').disabled = true;
+    goChoice('line', CAMPAIGN.lineUrl);
+  });
+  document.getElementById('btnApp').addEventListener('click', function(){
+    this.disabled = true;
+    document.getElementById('btnLine').disabled = true;
+    goChoice('app_store', destUrl);
+  });
 
-  /* ===== リダイレクト（デバッグ時は停止） ===== */
-  if (!DEBUG) {
+  /* ===== リダイレクト（期間中とデバッグ時は停止） ===== */
+  if (!DEBUG && !isCampaign) {
     setTimeout(function(){
       window.location.replace(destUrl);
     }, 1200);
