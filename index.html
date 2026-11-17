@@ -283,15 +283,28 @@ var isCampaign = (nowMs >= CAMPAIGN.start && nowMs <= CAMPAIGN.end);
     }
   }
 
+  function resetChoiceButtons(){
+    var b1 = document.getElementById('btnLine');
+    if (b1) b1.disabled = false;
+    var b2 = document.getElementById('btnApp');
+    if (b2) b2.disabled = false;
+  }
+
   document.getElementById('btnLine').addEventListener('click', function(){
     this.disabled = true;
     document.getElementById('btnApp').disabled = true;
+    setTimeout(resetChoiceButtons, 2500);
     goChoice('line', CAMPAIGN.lineUrl);
   });
   document.getElementById('btnApp').addEventListener('click', function(){
     this.disabled = true;
     document.getElementById('btnLine').disabled = true;
+    setTimeout(resetChoiceButtons, 2500);
     goChoice('app_store', destUrl);
+  });
+
+  window.addEventListener('pageshow', function(){
+    resetChoiceButtons();
   });
 
   /* ===== リダイレクト（期間中とデバッグ時は停止） ===== */
